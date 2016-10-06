@@ -1,0 +1,48 @@
+<project name="grouper-box-provisioner" default="dist" basedir=".">
+
+	<property name="external.lib"  value="/Users/hagimotk/iamLibs_java7"/>
+	<property name="src" location="../src" />
+	<property name="build" location="../build" />
+	<property name="dist" location="../build/dist" />
+	<property name="package" value="edu/oregonstate/iam/grouper_process"/>
+	<property name="version" value="1.0.0" />
+
+	<path id="project.class.path">
+        <pathelement path="${src}"/>
+		<fileset dir="${external.lib}">
+            <include name="*.jar"/>	
+        </fileset>
+    </path>
+	
+	<target name="clean" description="clean up">
+		<delete dir="${dist}" />
+		<delete dir="${build}/edu" />
+	</target>
+
+	<target name="init" depends="clean">
+		<mkdir dir="${dist}" />
+	</target>
+
+	<target name="compile" depends="init" description="compile the source ">
+		<javac srcdir="${src}"
+               destdir="${build}"
+               debug="on"
+               deprecation="on"
+			   includeantruntime="false" >
+			<include name="**/${package}/**/BoxChangeLogConsumer.java"/>
+			<classpath refid="project.class.path"/>
+		</javac>
+	</target>
+
+	<target name="dist" depends="compile" description="generate the distribution">
+
+		<jar destfile="${dist}/${ant.project.name}-${version}.jar" manifest="${src}/META-INF/MANIFEST.MF" >
+			<fileset dir="${build}" 
+						excludes="${dist}/** build*.xml *.sh"/>
+		</jar>
+		<copy file="../README" todir="${dist}" />
+		<copy file="../boxconfig.properties" tofile="${dist}/boxconfig.properties" />
+		
+	</target>
+
+</project>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/BoxLibs"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/IamLoggingLibs"/>
+	<classpathentry kind="lib" path="/Users/hagimotk/iamLibs/grouper.jar"/>
+	<classpathentry kind="lib" path="/Users/hagimotk/iamLibs/subject.jar"/>
+	<classpathentry kind="lib" path="/Users/hagimotk/iamLibs/grouperClient.jar"/>
+	<classpathentry kind="lib" path="/Users/hagimotk/iamLibs/gson-2.3.1.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

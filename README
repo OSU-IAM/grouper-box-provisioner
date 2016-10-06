@@ -1,0 +1,44 @@
+Contents of this dir:
+
+#### Box Change Log Consumer
+
+- files (in dist)
+  grouper-box-provisioner-x.x.x.jar
+  README
+  boxconfig.properties
+- libs:
+  box-java-sdk-2.1.1.jar
+  minimal-json-0.9.1.jar
+  jose4j-0.5.1.jar
+  bcprov-ext-jdk15on-1.52.jar
+  bcpkix-jdk15on-1.52.jar
+  gson-2.3.1.jar
+
+- scp files (e.g., /private/consumers/box)
+- scp libs  (e.g., /private/consumers/libs)
+
+
+- create file box_refresh_token.txt and put the initial refresh_token for the box_iam user @ BoxApplication specified in the boxconfig.properties file.
+vi /private/consumers/box/box_refresh_token.txt
+
+- Update setenv.sh
+# libs shared among consumers
+CLASSPATH=${CLASSPATH}:/private/consumers/libs/*
+# Box Consumer
+CLASSPATH=${CLASSPATH}:/private/consumers/box/grouper-box-provisioner-x.x.x.jar
+
+- Update log4j.properties
+log4j.logger.edu.oregonstate.iam.grouper_process = DEBUG, grouper_debug
+# include lib if needed...
+#log4j.logger.edu.oregonstate.iam.lib = DEBUG, grouper_debug
+
+- Update grouper-loader.properties
+##################################
+# Consumer for adding and activating Box user accounts
+##################################
+changeLog.consumer.box.class = edu.oregonstate.iam.grouper_process.BoxChangeLogConsumer
+changeLog.consumer.box.configPropertiesFilePath = /private/consumers/box/boxconfig.properties
+changeLog.consumer.box.grouperGroupIdPath = psp:osu:org:is:app:box:employee
+changeLog.consumer.box.quartzCron =
+
+- restart loader

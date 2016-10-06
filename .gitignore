@@ -1,4 +1,11 @@
 *.class
+build/edu/
+dist/
+/log4j.xml
+/log4j.out.xml
+/log4j.dtd
+/bin
+/logs
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
@@ -10,3 +17,4 @@
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+/bin/
