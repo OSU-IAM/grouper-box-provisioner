@@ -34,6 +34,7 @@ public class BoxConfig {
 	private static final String PORT = "port";
 	private static final String FROM_ADDRESS = "fromAddress";
 
+	private static final String BOX_FOLDER_ADMIN = "boxFolderAdmin";
 	/**
 	 * Init BoxConfig - will read from file path specified
 	 * 
@@ -112,6 +113,10 @@ public class BoxConfig {
 	public String getFromAddress() {
 		return properties.getProperty(FROM_ADDRESS);
 	}
+	
+	public String getBoxFolderAdmin() {
+		return properties.getProperty(BOX_FOLDER_ADMIN);
+	}
 
 	/**
 	 * For debugging
@@ -132,7 +137,8 @@ public class BoxConfig {
 				"boxAdminEmail="+ getBoxAdminEmail()  +  "\n" +
 				"smtp="+ getSMTP() +  "\n" +
 				"port="+ getPort() +  "\n" +
-				"fromAddress="+ getFromAddress() ;
+				"fromAddress="+ getFromAddress() +  "\n" +
+				"boxFolderAdmin="+ getBoxFolderAdmin() ;
 
 	}
 	

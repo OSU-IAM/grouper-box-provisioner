@@ -60,8 +60,8 @@ public class BoxChangeLogConsumer extends ChangeLogConsumerBase {
 
 			try {
 
-				// get BoxConnection for Co-Admin user
-				boxCon = new BoxConnection(boxConfig);
+				// get BoxConnection for the Service Account
+				boxCon = new BoxConnection(boxConfig, true, false);
 
 				// get the Grouper group ID Path for the Box-enabled Employees
 				String grouperGroupIdPath = GrouperLoaderConfig.retrieveConfig().propertyValueStringRequired("changeLog.consumer.box.grouperGroupIdPath");
@@ -83,7 +83,7 @@ public class BoxChangeLogConsumer extends ChangeLogConsumerBase {
 
 							// check if user exists
 							try {
-								boxUser = BoxUtil.getManagedUserByLogin(boxCon.getCoAdminConnection(), boxUserId);
+								boxUser = BoxUtil.getManagedUserByLogin(boxCon.getAppEnterpriseConnection(), boxUserId);
 								boxApiError = false;
 							} catch(BoxAPIException bae) {
 								// don't know if user exists or not at this point, so don't proceed
@@ -112,7 +112,7 @@ public class BoxChangeLogConsumer extends ChangeLogConsumerBase {
 									
 									// if user is null at this point, BoxUser didn't exist, so create with ACTIVE status
 									try {
-										boxUser = BoxUtil.createUser(boxCon.getCoAdminConnection(), boxUserId, boxUserFullName);										
+										boxUser = BoxUtil.createUser(boxCon.getAppEnterpriseConnection(), boxUserId, boxUserFullName);										
 										enabled = true;
 									} catch(BoxAPIException bae) {
 										logger.debug("BoxAPIException calling BoxUtil.createUser({}).  {}, {}",boxUserId,bae.getMessage(), bae.getResponse());
@@ -140,7 +140,7 @@ public class BoxChangeLogConsumer extends ChangeLogConsumerBase {
 										if(emailAlias.equals(boxUserId)) continue;
 										
 										if("".equals(BoxUtil.getEmailAliasId(boxUser, emailAlias))) {
-											if(!BoxUtil.addEmailAliasNoNotification(boxCon.getCoAdminConnection(), boxUser.getID(), emailAlias)) {
+											if(!BoxUtil.addEmailAliasNoNotification(boxCon.getAppEnterpriseConnection(), boxUser.getID(), emailAlias)) {
 												// log the error but continue...
 												logger.debug("Failed to add alias '{}' to BoxUser {}.",emailAlias,boxUserId);  
 											}
@@ -166,10 +166,9 @@ public class BoxChangeLogConsumer extends ChangeLogConsumerBase {
 				}
 
 				
-			} finally {
-				
-				boxCon.saveRefreshToken();
-
+			} catch (BoxAPIException bae) {
+				changeLogProcessorMetadata.registerProblem(bae, "Error processing record.  BoxAPIException "+bae.getMessage(), currentId);
+				return currentId-1;
 			}
 		} catch (Exception e) {
 			changeLogProcessorMetadata.registerProblem(e, "Error processing record", currentId);

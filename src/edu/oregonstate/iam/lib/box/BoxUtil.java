@@ -17,6 +17,7 @@ import com.box.sdk.BoxAPIRequest;
 import com.box.sdk.BoxAPIResponse;
 import com.box.sdk.BoxFolder;
 import com.box.sdk.BoxGroup;
+import com.box.sdk.BoxItem;
 import com.box.sdk.BoxUser;
 import com.box.sdk.CreateUserParams;
 import com.box.sdk.EmailAlias;
@@ -65,7 +66,7 @@ public class BoxUtil {
 		BoxAPIResponse apiResponse = null;
 		try{
 			apiResponse = apiRequest.send();
-			logger.debug("Added email Alias for {}: {}.",boxUserId, emailAlias);
+			logger.debug("Added email Alias for {}: {}. ResponseCode={} : {} ",boxUserId, emailAlias,apiResponse.getResponseCode(),apiResponse.toString());
 		} catch (BoxAPIException bae) {
 
 			res = false;
@@ -135,7 +136,8 @@ public class BoxUtil {
 	}
 	
     /**
-     * Need to be coAdmin of the Enterprise - Neither AppUserCon or AppEntCon will work...
+     * Gets a Boxuser by the Box Login
+     * 
      * @param api
      * @param login
      * @return
@@ -177,7 +179,6 @@ public class BoxUtil {
 		
 		return emailAliasId;
 	}
-	
 
 	/**
 	 * Rename a given folder to a new name calling the API as the given box user.
@@ -229,9 +230,8 @@ public class BoxUtil {
 		BoxAPIResponse apiResponse = null;
 		try{
 			apiResponse = apiRequest.send();
-			Scanner scanner = null;
-			try {
-				scanner = new Scanner(apiResponse.getBody()).useDelimiter("\\A");
+			try (@SuppressWarnings("resource")
+			Scanner scanner = new Scanner(apiResponse.getBody()).useDelimiter("\\A")) {
 			    if(scanner.hasNext()) {
 			    	String jsonRes = scanner.next();
 					logger.debug(jsonRes);
@@ -245,8 +245,6 @@ public class BoxUtil {
 			    	
 			    }
 				
-			} finally {
-				if(scanner != null) scanner.close();
 			}
 			
 		} catch (BoxAPIException bae) {
@@ -302,24 +300,21 @@ public class BoxUtil {
 		BoxAPIResponse apiResponse = null;
 		try{
 			apiResponse = apiRequest.send();
-			Scanner scanner = null;
-			try {
-				scanner = new Scanner(apiResponse.getBody()).useDelimiter("\\A");
+			try (@SuppressWarnings("resource")
+			Scanner scanner = new Scanner(apiResponse.getBody()).useDelimiter("\\A")) {
 			    if(scanner.hasNext()) {
 			    	String jsonRes = scanner.next();
 					logger.debug(jsonRes);
 			    	//parse JSON to get folder ID.  Make sure there was only one result...
 			    	JsonParser jsonParser = new JsonParser();
 					JsonObject jsonObj = (JsonObject) jsonParser.parse(jsonRes);
-					//get id of the folder and return BoxFolder
+					// get id of the folder and return BoxFolder
 					String folderId = jsonObj.get("id").toString().replace("\"", "");
 					logger.debug("folderId={}",folderId);
 					folder = new BoxFolder(api, folderId);
 			    	
 			    }
 				
-			} finally {
-				if(scanner != null) scanner.close();
 			}
 			
 		} catch (BoxAPIException bae) {
@@ -371,12 +366,12 @@ public class BoxUtil {
 		
 		String method = "GET";
 		BoxAPIRequest apiRequest = new BoxAPIRequest(api, url, method);
+		apiRequest.addHeader("As-User", boxUserId);
 		BoxAPIResponse apiResponse = null;
 		try{
 			apiResponse = apiRequest.send();
-			Scanner scanner = null;
-			try {
-			    scanner = new Scanner(apiResponse.getBody()).useDelimiter("\\A");
+			try (@SuppressWarnings("resource")
+			Scanner scanner = new Scanner(apiResponse.getBody()).useDelimiter("\\A")) {
 			    if(scanner.hasNext()) {
 			    	String jsonRes = scanner.next();
 			    	//parse JSON to get folder ID.  Make sure there was only one result...
@@ -399,8 +394,6 @@ public class BoxUtil {
 
 					if(!folderId.equals("")) tempFolder = new BoxFolder(api, folderId);
 			    }
-			} finally {
-				if(scanner != null) scanner.close();
 			}
 			
 		} catch (BoxAPIException bae) {
@@ -422,8 +415,6 @@ public class BoxUtil {
 	
 	/**
 	 * Creates a folder with the given folderName under the given folder.  If the folder with the same name already exists, return the existing folder.
-     *  - works with  AppUserConnection
-     *  - Doesn't work with AppEnterpriseConnection (403)
 	 * 
 	 * @param folder
 	 * @param folderName
@@ -431,21 +422,63 @@ public class BoxUtil {
 	 */
 	public static BoxFolder createFolderAt(BoxFolder folder, String folderName) {
 		
-		BoxFolder newFolder = null;
+		return createFolderAt(folder, folderName, "");
+
+	}
+	
+	/**
+	 * Creates a folder with the given folderName under the given folder.  If the folder with the same name already exists, return the existing folder.
+	 * 
+	 * @param folder  parent folder for the new folder
+	 * @param folderName  name of the new folder
+	 * @param asUserBoxUserId    if provided, calls the API as this user
+	 * @return
+	 */
+	public static BoxFolder createFolderAt(BoxFolder folder, String folderName, String asUserBoxUserId) {
+
+		BoxFolder tempFolder = null;
 		
+		URL url = null; 
+		String urlString = "https://api.box.com/2.0/folders";
+		logger.debug(urlString);
+		try {
+			url = new URL(urlString);
+		} catch (MalformedURLException e) {
+			logger.info("Bad URL: {}",urlString);
+			return tempFolder;
+		}
+		
+		String method = "POST";
+		BoxAPIRequest apiRequest = new BoxAPIRequest(folder.getAPI(), url, method);
+		
+		if(!("".equals(asUserBoxUserId))) apiRequest.addHeader("As-User", asUserBoxUserId);
+		apiRequest.setBody("{\"name\": \""+folderName+"\", \"parent\": {\"id\": \""+folder.getID()+"\"}}");
+		
+		BoxAPIResponse apiResponse = null;
 		try{
-	        BoxFolder.Info info = folder.createFolder(folderName);
-	        logger.debug("- createFolderAt: {}({})",info.getName(),info.getID());
-	        newFolder = info.getResource();
-	        
-		} catch(BoxAPIException e) {
+			apiResponse = apiRequest.send();
+			try (@SuppressWarnings("resource")
+			Scanner scanner = new Scanner(apiResponse.getBody()).useDelimiter("\\A")) {
+			    if(scanner.hasNext()) {
+			    	String jsonRes = scanner.next();
+			    	logger.debug("jsonRes="+jsonRes);
+			    	//parse JSON to get folder ID for the folder that was just created
+			    	JsonParser jsonParser = new JsonParser();
+					JsonObject jsonObj = (JsonObject) jsonParser.parse(jsonRes);
+					String folderId = jsonObj.get("id").toString().replace("\"", "");
+					logger.debug("Got folder ID for new folder: {}", folderId);
+					if(!folderId.equals("")) tempFolder = new BoxFolder(folder.getAPI(), folderId);
+			    } else {
+			    	logger.debug("No folder created!");
+			    }
+			}
+			
+		} catch (BoxAPIException bae) {
 
 			// capture 409 item_name_in_use here and return the existing BoxFolder.
-			if(e.getResponseCode()==409 && e.getResponse().contains("item_name_in_use")) {
+			if(bae.getResponseCode()==409 && bae.getResponse().contains("item_name_in_use")) {
 				// parse response JSON and get the folder ID that has this name and return it..
-				Scanner scanner = null;
-				try {
-					scanner = new Scanner(e.getResponse()).useDelimiter("\\A");
+				try (Scanner scanner = new Scanner(bae.getResponse()).useDelimiter("\\A")) {
 				    if(scanner.hasNext()) {
 				    	String jsonRes = scanner.next();
 						logger.debug(jsonRes);
@@ -460,29 +493,42 @@ public class BoxUtil {
 						if(iter.hasNext()) {
 							folderId = ((JsonObject)iter.next()).get("id").toString().replace("\"", "");							
 							logger.debug("folderId={}",folderId);
-							newFolder = new BoxFolder(folder.getAPI(), folderId);
+							tempFolder = new BoxFolder(folder.getAPI(), folderId);
 						}
 				    	
-				    }
-					
-				} finally {
-					if(scanner != null) scanner.close();
+				    }	
 				}
 				
-			} else logger.info("- createFolderAt Error: {}, {}",e.getMessage(), e.getResponse());
+			} else logger.info("- createFolderAt Error: {}, {}",bae.getMessage(), bae.getResponse());			
+
+		} finally {
+			try {
+				if(apiResponse != null) apiResponse.disconnect();							
+			} catch(BoxAPIException bae) {
+				// TODO just consume this.. submitted a case.  Whenever disconnect is called for this method, it seems to throw an exception. 
+				// case: https://community.box.com/t5/custom/page/page-id/BoxViewTicketDetail?ticket_id=1183248
+				
+			}
 		}
 		
-		return newFolder;
+		return tempFolder;
 	}
 
+
 	/**
-	 * To get BoxGroup by name, need to be the co-admin or use the AppEnterpriseConnection.  AppUserConnection will not get any groups.
+	 * To get BoxGroup by name, need to be the co-admin or use the AppEnterpriseConnection.  
 	 * 
 	 * @param api
 	 * @param groupName
 	 * @return
 	 */
 	public static BoxGroup getBoxGroupByName(BoxAPIConnection api, String groupName) {
+		
+		//TODO
+		// the following will get the fields I need to sync with Grouper groups
+		//curl https://api.box.com/2.0/groups?fields=name,description,provenance,external_sync_identifier -H "Authorization: Bearer tjrg2ZefZZPH8ptzApSsshu4KagwW4I0" -X GET
+		
+		//TODO Is there a better way to find a group by name other than iterating all groups?  Search API only searches contents...
 		
 		BoxGroup tempGroup = null;
 		
@@ -621,6 +667,7 @@ public class BoxUtil {
 		params.setSpaceAmount(-1); // unlimited space
 		params.setIsSyncEnabled(true);
 		BoxUser.Info newUserInfo = BoxUser.createEnterpriseUser(api, login, name, params);
+//		logger.debug("new user's boxId="+newUserInfo.getID());
 
 		return newUserInfo.getResource();	
 	}
@@ -651,9 +698,8 @@ public class BoxUtil {
 		BoxAPIResponse apiResponse = null;
 		try{
 			apiResponse = apiRequest.send();
-			Scanner scanner = null;
-			try {
-				scanner = new Scanner(apiResponse.getBody()).useDelimiter("\\A");
+			try (@SuppressWarnings("resource")
+			Scanner scanner = new Scanner(apiResponse.getBody()).useDelimiter("\\A")) {
 			    if(scanner.hasNext()) {
 			    	String jsonRes = scanner.next();
 //					logger.debug(jsonRes);
@@ -675,9 +721,7 @@ public class BoxUtil {
 
 			    }
 				
-			} finally {
-				if(scanner != null) scanner.close();
-			}
+			} 
 			
 		} catch (BoxAPIException bae) {
 
@@ -723,9 +767,8 @@ public class BoxUtil {
 		BoxAPIResponse apiResponse = null;
 		try{
 			apiResponse = apiRequest.send();
-			Scanner scanner = null;
-			try {
-				scanner = new Scanner(apiResponse.getBody()).useDelimiter("\\A");
+			try (@SuppressWarnings("resource")
+			Scanner scanner = new Scanner(apiResponse.getBody()).useDelimiter("\\A")) {
 			    if(scanner.hasNext()) {
 			    	String jsonRes = scanner.next();
 //					logger.debug(jsonRes);
@@ -738,9 +781,7 @@ public class BoxUtil {
 					owner = ownerId.equals(boxUser.getID());
 			    }
 				
-			} finally {
-				if(scanner != null) scanner.close();
-			}
+			} 
 			
 		} catch (BoxAPIException bae) {
 

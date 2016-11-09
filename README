@@ -18,8 +18,7 @@ Contents of this dir:
 - scp libs  (e.g., /private/consumers/libs)
 
 
-- create file box_refresh_token.txt and put the initial refresh_token for the box_iam user @ BoxApplication specified in the boxconfig.properties file.
-vi /private/consumers/box/box_refresh_token.txt
+- also include the private_key that you created for the application.  (publicKeyID should be included in the boxconfig.properties)
 
 - Update setenv.sh
 # libs shared among consumers
